@@ -1,13 +1,16 @@
 import { ChangeEvent, Dispatch, SetStateAction, useRef, useState } from "react";
 import { Job, JobPriority } from "../types/jobs";
 
+
 interface UploadPanelProps {
     setJobs: Dispatch<SetStateAction<Job[]>>;
+    onUploadComplete: () => void;
 }
 
-
-
-const UploadPanel = ({ setJobs }: UploadPanelProps) => {
+const UploadPanel = ({
+    setJobs,
+    onUploadComplete,
+}: UploadPanelProps) => {
     const [file, setFile] = useState<File | null>(null);
     const [priority, setPriority] = useState<JobPriority>("high");
     const processingRef = useRef(false);
@@ -75,7 +78,10 @@ const UploadPanel = ({ setJobs }: UploadPanelProps) => {
         updateJob(nextJob.id, {
             status: "completed",
             progress: 100,
-            result: 80,
+            result: {
+                total: 0,
+                numberCount: 0,
+            },
         });
 
         processingRef.current = false;
@@ -87,79 +93,42 @@ const UploadPanel = ({ setJobs }: UploadPanelProps) => {
         file: File,
         priority: JobPriority
     ) => {
-        const sleep = (ms: number) =>
-            new Promise((resolve) => setTimeout(resolve, ms));
+        try {
+            const formData = new FormData();
 
-        const jobId = `job-${Date.now()}-${Math.random()
-            .toString(36)
-            .slice(2, 7)}`;
+            formData.append("file", file);
+            formData.append("priority", priority);
 
-        const newJob: Job = {
-            id: jobId,
-            fileName: file.name,
-            priority,
-            status: "uploading",
-            progress: 0,
-        };
-
-        setJobs((prev) => [...prev, newJob]);
-
-        await sleep(800);
-
-        setJobs((prev) =>
-            prev.map((job) =>
-                job.id === jobId
-                    ? {
-                        ...job,
-                        status: "uploaded",
-                    }
-                    : job
-            )
-        );
-
-        await sleep(400);
-
-        const queuedJob: Job = {
-            ...newJob,
-            status: "queued",
-        };
-
-        setJobs((prev) =>
-            prev.map((job) =>
-                job.id === jobId
-                    ? {
-                        ...job,
-                        status: "queued",
-                    }
-                    : job
-            )
-        );
-
-        queueRef.current.push(queuedJob);
-
-        if (processingRef.current) {
-            setJobs((prev) =>
-                prev.map((job) =>
-                    job.id === jobId
-                        ? {
-                            ...job,
-                            status: "waiting",
-                            processId: String(
-                                Math.floor(Math.random() * 9000) + 1000
-                            ),
-                        }
-                        : job
-                )
+            const response = await fetch(
+                "http://localhost:9002/api/jobs/upload",
+                {
+                    method: "POST",
+                    body: formData,
+                }
             );
+
+            if (!response.ok) {
+                const error = await response.json();
+
+                throw new Error(
+                    error.message || "Upload failed"
+                );
+            }
+
+            const data = await response.json();
+
+            console.log("Server Job:", data.job);
+            setJobs((prev) => [...prev, data.job]);
+            onUploadComplete();
+
+            setFile(null);
+        } catch (error) {
+            console.error("Upload error:", error);
         }
-
-        await sleep(300);
-
-        processQueue();
     };
 
     return (
-        <section className="rounded-2xl border border-slate-800 bg-slate-900 p-6">
+        <section className="rounded-2xl border border-slate-800  p-6">
             <div className="mb-6">
                 <h2 className="text-lg font-semibold text-white">
                     Upload CSV
@@ -207,9 +176,9 @@ const UploadPanel = ({ setJobs }: UploadPanelProps) => {
 
             <div className="mt-6 flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
                 <div>
-                    <p className="mb-2 text-sm font-medium text-slate-300">
+                    <h1 className="mb-2 text-sm font-medium text-slate-300">
                         Priority
-                    </p>
+                    </h1>
 
                     <div className="flex gap-3">
                         <button

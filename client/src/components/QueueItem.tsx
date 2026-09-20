@@ -5,6 +5,7 @@ interface QueueItemProps {
 }
 
 const QueueItem = ({ job }: QueueItemProps) => {
+
   const isProcessing = job.status === "processing";
   const isCompleted = job.status === "completed";
 
@@ -18,11 +19,10 @@ const QueueItem = ({ job }: QueueItemProps) => {
             </h3>
 
             <span
-              className={`rounded-full px-2 py-1 text-[11px] font-semibold uppercase ${
-                job.priority === "high"
+              className={`rounded-full px-2 py-1 text-[11px] font-semibold uppercase ${job.priority === "high"
                   ? "bg-white text-slate-950"
                   : "bg-slate-800 text-slate-300"
-              }`}
+                }`}
             >
               {job.priority}
             </span>
@@ -38,8 +38,8 @@ const QueueItem = ({ job }: QueueItemProps) => {
             {job.status === "processing"
               ? "Processing..."
               : job.status === "waiting"
-              ? "Waiting for processing"
-              : job.status}
+                ? "Waiting for processing"
+                : job.status}
           </p>
 
           {job.processId && (
@@ -71,14 +71,19 @@ const QueueItem = ({ job }: QueueItemProps) => {
         </div>
       )}
 
-      {isCompleted && (
-        <div className="mt-4 flex items-center justify-between rounded-lg bg-emerald-500/10 px-4 py-3">
-          <span className="text-sm text-emerald-400">
+      {isCompleted && job.result && (
+        <div className="mt-4 rounded-lg bg-emerald-500/10 px-4 py-3">
+          <p className="text-sm text-emerald-400">
             Processing completed
-          </span>
+          </p>
+        
+          <p className="mt-2 text-lg font-semibold text-white">
+            Total: {job.result.total}
+          </p>
 
-          {job.result}
-
+          <p className="mt-1 text-xs text-slate-500">
+            Numbers processed: {job.result.numberCount}
+          </p>
         </div>
       )}
     </div>

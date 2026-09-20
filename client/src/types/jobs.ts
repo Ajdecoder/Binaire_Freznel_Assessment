@@ -9,5 +9,8 @@ export interface Job {
     status: JobStatus;
     progress: number;
     processId?: string;
-    result?: number;
+    result?: {
+        total: number;
+        numberCount: number;
+    };
 }
