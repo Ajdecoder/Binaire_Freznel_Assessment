@@ -11,7 +11,7 @@ const upload = multer({
 module.exports = ({ queueManager, queueController }) => {
   router.post(
     "/upload",
-    upload.single("file"),
+    upload.array("files"),
     uploadController({
       queueManager,
       queueController,

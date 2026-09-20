@@ -10,14 +10,20 @@ export const api = axios.create({
 });
 
 export const UploadCSV = async (
-    file: File,
-    priority: JobPriority,
-    onProgress?: (progress: number) => void
+    files: File[],
+    priorities: JobPriority[],
+    onProgress: (progress: number) => void
 ) => {
     const formData = new FormData();
 
-    formData.append("file", file);
-    formData.append("priority", priority);
+    files.forEach((file) => {
+        formData.append("files", file);
+    });
+
+    formData.append(
+        "priorities",
+        JSON.stringify(priorities)
+    );
 
     const response = await api.post(
         "/jobs/upload",
@@ -27,16 +33,17 @@ export const UploadCSV = async (
                 if (!event.total) return;
 
                 const progress = Math.round(
-                    (event.loaded / event.total) * 100
+                    (event.loaded * 100) / event.total
                 );
 
-                onProgress?.(progress);
+                onProgress(progress);
             },
         }
     );
 
     return response.data;
 };
+
 
 export const GetJobs = async () => {
     const response = await api.get("/jobs");

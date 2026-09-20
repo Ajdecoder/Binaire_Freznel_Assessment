@@ -13,95 +13,124 @@ interface UploadPanelProps {
 }
 
 const UploadPanel = ({ setJobs }: UploadPanelProps) => {
-    const [file, setFile] = useState<File | null>(null);
-    const [priority, setPriority] = useState<JobPriority>("high");
+    const [files, setFiles] = useState<File[]>([]);
+    const [priorities, setPriorities] = useState<JobPriority[]>([]);
     const [isUploading, setIsUploading] = useState(false);
 
     const handleFileChange = (
         event: ChangeEvent<HTMLInputElement>
     ) => {
-        const selectedFile = event.target.files?.[0];
+        const selectedFiles = Array.from(event.target.files || []);
 
-        if (!selectedFile) return;
+        const csvFiles = selectedFiles.filter((file) =>
+            file.name.toLowerCase().endsWith(".csv")
+        );
 
-        if (
-            !selectedFile.name
-                .toLowerCase()
-                .endsWith(".csv")
-        ) {
-            return;
-        }
+        if (csvFiles.length === 0) return;
 
-        setFile(selectedFile);
+        setFiles(csvFiles);
+
+        // Default priority for every file
+        setPriorities(
+            csvFiles.map(() => "high")
+        );
     };
 
-    const handleUpload = async (
-        file: File,
+    const handlePriorityChange = (
+        index: number,
         priority: JobPriority
     ) => {
-        if (isUploading) return;
+        setPriorities((prev) =>
+            prev.map((item, i) =>
+                i === index ? priority : item
+            )
+        );
+    };
+
+    const handleUpload = async () => {
+        if (isUploading || files.length === 0) return;
 
         setIsUploading(true);
 
-        const jobId = `job-${Date.now()}-${Math.random()
-            .toString(36)
-            .slice(2, 7)}`;
+        // Create temporary jobs for UI
+        const tempJobs: Job[] = files.map(
+            (file, index) => ({
+                id: `temp-${Date.now()}-${index}`,
+                fileName: file.name,
+                priority: priorities[index],
+                status: "uploading",
+                uploadProgress: 0,
+                progress: 0,
+            })
+        );
 
-        const newJob: Job = {
-            id: jobId,
-            fileName: file.name,
-            priority,
-            status: "uploading",
-            uploadProgress: 0,
-            progress: 0,
-        };
-
-        setJobs((prev) => [...prev, newJob]);
+        setJobs((prev) => [...prev, ...tempJobs]);
 
         try {
-            const data = await UploadCSV(
-                file,
-                priority,
-                (uploadProgress) => {
-                    setJobs((prev) =>
-                        prev.map((job) =>
-                            job.id === jobId
-                                ? {
-                                    ...job,
-                                    uploadProgress,
-                                }
-                                : job
-                        )
-                    );
-                }
-            );
+            const results = await Promise.all(
+                files.map((files, fileIndex) =>
+                    UploadCSV(
+                        [files],
+                        [priorities[fileIndex]],
+                        (uploadProgress) => {
+                            setJobs((prev) =>
+                                prev.map((job) => {
+                                    const index = tempJobs.findIndex(
+                                        (tempJob) => tempJob.id === job.id
+                                    );
 
+                                    if (index !== fileIndex) return job;
 
-            setJobs((prev) =>
-                prev.map((job) =>
-                    job.id === jobId
-                        ? {
-                            ...job,
-                            ...data.job,
-                            uploadProgress: 100,
+                                    return {
+                                        ...job,
+                                        uploadProgress,
+                                    };
+                                })
+                            );
                         }
-                        : job
+                    )
                 )
             );
 
-            setFile(null);
+            const data = {
+                jobs: results.flatMap((result) => result.jobs),
+            };
+
+            // Backend returns multiple jobs
+            setJobs((prev) =>
+                prev.map((job) => {
+                    const index = tempJobs.findIndex(
+                        (tempJob) => tempJob.id === job.id
+                    );
+
+                    if (index === -1) return job;
+
+                    return {
+                        ...job,
+                        ...data.jobs[index],
+                        uploadProgress: 100,
+                    };
+                })
+            );
+
+            setFiles([]);
+            setPriorities([]);
         } catch (error) {
             console.error("Upload failed:", error);
 
             setJobs((prev) =>
-                prev.map((job) =>
-                    job.id === jobId
+                prev.map((job) => {
+                    const isTempJob = tempJobs.some(
+                        (tempJob) => tempJob.id === job.id
+                    );
+
+                    return isTempJob
                         ? {
                             ...job,
                             status: "failed",
                         }
-                        : job
-                )
+                        : job;
+                })
             );
         } finally {
             setIsUploading(false);
@@ -116,7 +145,8 @@ const UploadPanel = ({ setJobs }: UploadPanelProps) => {
                 </h2>
 
                 <p className="mt-1 text-sm text-slate-400">
-                    Select a CSV file and choose its processing priority.
+                    Select multiple CSV files and choose their
+                    processing priority.
                 </p>
             </div>
 
@@ -124,6 +154,7 @@ const UploadPanel = ({ setJobs }: UploadPanelProps) => {
                 <input
                     type="file"
                     accept=".csv,text/csv"
+                    multiple
                     onChange={handleFileChange}
                     disabled={isUploading}
                     className="hidden"
@@ -133,81 +164,102 @@ const UploadPanel = ({ setJobs }: UploadPanelProps) => {
                     ↑
                 </div>
 
-                {file ? (
+                {files.length > 0 ? (
                     <>
                         <p className="text-sm font-medium text-white">
-                            {file.name}
+                            {files.length} CSV file
+                            {files.length > 1 ? "s" : ""} selected
                         </p>
 
                         <p className="mt-1 text-xs text-slate-500">
-                            Click to choose another file
+                            Click to choose different files
                         </p>
                     </>
                 ) : (
                     <>
                         <p className="text-sm font-medium text-white">
-                            Choose a CSV file
+                            Choose CSV files
                         </p>
 
                         <p className="mt-1 text-xs text-slate-500">
-                            CSV files only
+                            You can select multiple CSV files
                         </p>
                     </>
                 )}
             </label>
 
-            <div className="mt-6 flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
-                <div>
-                    <h1 className="mb-2 text-sm font-medium text-slate-300">
-                        Priority
-                    </h1>
-
-                    <div className="flex gap-3">
-                        <button
-                            type="button"
-                            disabled={isUploading}
-                            onClick={() =>
-                                setPriority("low")
-                            }
-                            className={`rounded-lg border px-4 py-2 text-sm transition ${
-                                priority === "low"
-                                    ? "border-slate-500 bg-slate-800 text-white"
-                                    : "border-slate-800 bg-slate-950 text-slate-400 hover:text-white"
-                            } disabled:cursor-not-allowed disabled:opacity-50`}
+            {files.length > 0 && (
+                <div className="mt-6 space-y-3">
+                    {files.map((file, index) => (
+                        <div
+                            key={`${file.name}-${index}`}
+                            className="flex flex-col gap-3 rounded-lg border border-slate-800 bg-slate-950 p-4 sm:flex-row sm:items-center sm:justify-between"
                         >
-                            Low
-                        </button>
+                            <div>
+                                <p className="text-sm font-medium text-white">
+                                    {file.name}
+                                </p>
 
-                        <button
-                            type="button"
-                            disabled={isUploading}
-                            onClick={() =>
-                                setPriority("high")
-                            }
-                            className={`rounded-lg border px-4 py-2 text-sm transition ${
-                                priority === "high"
-                                    ? "border-white bg-white text-slate-950"
-                                    : "border-slate-800 bg-slate-950 text-slate-400 hover:text-white"
-                            } disabled:cursor-not-allowed disabled:opacity-50`}
-                        >
-                            High
-                        </button>
-                    </div>
+                                <p className="mt-1 text-xs text-slate-500">
+                                    {(file.size / 1024).toFixed(1)} KB
+                                </p>
+                            </div>
+
+                            <div className="flex gap-2">
+                                <button
+                                    type="button"
+                                    disabled={isUploading}
+                                    onClick={() =>
+                                        handlePriorityChange(
+                                            index,
+                                            "low"
+                                        )
+                                    }
+                                    className={`rounded-lg border px-3 py-1.5 text-xs transition ${
+                                        priorities[index] === "low"
+                                            ? "border-slate-500 bg-slate-800 text-white"
+                                            : "border-slate-800 bg-slate-950 text-slate-400 hover:text-white"
+                                    }`}
+                                >
+                                    Low
+                                </button>
+
+                                <button
+                                    type="button"
+                                    disabled={isUploading}
+                                    onClick={() =>
+                                        handlePriorityChange(
+                                            index,
+                                            "high"
+                                        )
+                                    }
+                                    className={`rounded-lg border px-3 py-1.5 text-xs transition ${
+                                        priorities[index] === "high"
+                                            ? "border-white bg-white text-slate-950"
+                                            : "border-slate-800 bg-slate-950 text-slate-400 hover:text-white"
+                                    }`}
+                                >
+                                    High
+                                </button>
+                            </div>
+                        </div>
+                    ))}
                 </div>
+            )}
 
+            <div className="mt-6 flex justify-end">
                 <button
                     type="button"
-                    disabled={!file || isUploading}
-                    onClick={() => {
-                        if (file) {
-                            handleUpload(file, priority);
-                        }
-                    }}
+                    disabled={
+                        files.length === 0 ||
+                        isUploading
+                    }
+                    onClick={handleUpload}
                     className="rounded-lg bg-white px-5 py-2.5 text-sm font-semibold text-slate-950 transition hover:bg-slate-200 disabled:cursor-not-allowed disabled:opacity-40"
                 >
                     {isUploading
                         ? "Uploading..."
-                        : "Upload File"}
+                        : `Upload ${files.length || ""} File${files.length !== 1 ? "s" : ""}`}
                 </button>
             </div>
         </section>
