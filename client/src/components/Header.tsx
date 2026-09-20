@@ -11,14 +11,6 @@ const Header = () => {
             Upload, queue and process your CSV files
           </p>
         </div>
-
-        <div className="flex items-center gap-2 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3 py-1.5">
-          <span className="h-2 w-2 rounded-full bg-emerald-400" />
-
-          <span className="text-xs font-medium text-emerald-400">
-            Server Online
-          </span>
-        </div>
       </div>
     </header>
   );
