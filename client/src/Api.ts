@@ -9,7 +9,9 @@ export const api = axios.create({
 });
 
 export const UploadCSV = async (
-file: File, priority: string, p0: (progress: any) => void) => {
+    file: File,
+    priority: string
+) => {
     const formData = new FormData();
 
     formData.append("file", file);
