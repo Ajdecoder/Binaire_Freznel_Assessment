@@ -9,13 +9,12 @@ class QueueController {
         this.notifyJobUpdate = notifyJobUpdate;
 
         this.isProcessing = false;
+        this.executionCounter = 0;
     }
 
     addJob(job) {
         this.queueManager.add(job);
 
-        
-        
         if (this.isProcessing) {
             job.updateStatus("waiting");
 
@@ -24,12 +23,10 @@ class QueueController {
             return;
         }
 
-        
         job.updateStatus("queued");
 
         this.notifyJobUpdate(job);
 
-        
         setTimeout(() => {
             this.processNext();
         }, 2000);
@@ -44,10 +41,14 @@ class QueueController {
 
         this.isProcessing = true;
 
-        
         await new Promise((resolve) =>
             setTimeout(resolve, 1500)
         );
+
+        // Actual execution starts here
+        this.executionCounter++;
+
+        job.executionOrder = this.executionCounter;
 
         job.updateStatus("processing");
         job.updateProgress(0);

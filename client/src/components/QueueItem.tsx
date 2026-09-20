@@ -5,12 +5,7 @@ interface QueueItemProps {
 }
 
 type Step = {
-    key:
-        | "uploading"
-        | "uploaded"
-        | "queued"
-        | "processing"
-        | "completed";
+    key: | "uploading" | "uploaded" | "queued" | "processing" | "completed";
     label: string;
 };
 
@@ -80,7 +75,7 @@ const QueueItem = ({ job }: QueueItemProps) => {
 
     return (
         <div className="rounded-xl border border-slate-800 bg-slate-950 p-5">
-            
+
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
@@ -89,11 +84,10 @@ const QueueItem = ({ job }: QueueItemProps) => {
                         </h3>
 
                         <span
-                            className={`rounded-full px-2 py-1 text-[11px] font-semibold uppercase ${
-                                job.priority === "high"
-                                    ? "bg-white text-slate-950"
-                                    : "bg-slate-800 text-slate-300"
-                            }`}
+                            className={`rounded-full px-2 py-1 text-[11px] font-semibold uppercase ${job.priority === "high"
+                                ? "bg-white text-slate-950"
+                                : "bg-slate-800 text-slate-300"
+                                }`}
                         >
                             {job.priority}
                         </span>
@@ -109,16 +103,16 @@ const QueueItem = ({ job }: QueueItemProps) => {
                         {isWaiting
                             ? "Waiting for processing"
                             : job.status === "processing"
-                            ? "Processing..."
-                            : job.status === "uploading"
-                            ? "Uploading..."
-                            : job.status === "uploaded"
-                            ? "File uploaded"
-                            : job.status === "queued"
-                            ? "Added to queue"
-                            : job.status === "completed"
-                            ? "Completed"
-                            : "Failed"}
+                                ? "Processing..."
+                                : job.status === "uploading"
+                                    ? "Uploading..."
+                                    : job.status === "uploaded"
+                                        ? "File uploaded"
+                                        : job.status === "queued"
+                                            ? "Added to queue"
+                                            : job.status === "completed"
+                                                ? "Completed"
+                                                : "Failed"}
                     </p>
 
                     {job.processId &&
@@ -131,7 +125,7 @@ const QueueItem = ({ job }: QueueItemProps) => {
                 </div>
             </div>
 
-            
+
             <div className="mt-6">
                 {steps.map((step, index) => {
                     const state = getStepState(step.key);
@@ -147,50 +141,47 @@ const QueueItem = ({ job }: QueueItemProps) => {
                             key={step.key}
                             className="relative flex gap-3"
                         >
-                            
+
                             {index < steps.length - 1 && (
                                 <div
-                                    className={`absolute left-2.25 top-6 h-7 w-px ${
-                                        isCompleted
-                                            ? "bg-slate-500"
-                                            : "bg-red-800"
-                                    }`}
+                                    className={`absolute left-2.25 top-6 h-7 w-px ${isCompleted
+                                        ? "bg-slate-500"
+                                        : "bg-red-800"
+                                        }`}
                                 />
                             )}
 
-                            
+
                             <div
-                                className={`relative z-10 mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border text-[10px] ${
-                                    isCompleted
-                                        ? "border-white bg-white text-slate-950"
-                                        : isCurrent
+                                className={`relative z-10 mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border text-[10px] ${isCompleted
+                                    ? "border-white bg-white text-slate-950"
+                                    : isCurrent
                                         ? "border-white text-white"
                                         : "border-slate-700 text-slate-600"
-                                }`}
+                                    }`}
                             >
                                 {isCompleted
                                     ? "✓"
                                     : index + 1}
                             </div>
 
-                            
+
                             <div className="min-h-11 flex-1">
                                 <div className="flex items-center justify-between">
                                     <span
-                                        className={`text-sm ${
-                                            isCurrent ||
+                                        className={`text-sm ${isCurrent ||
                                             isCompleted
-                                                ? "text-white"
-                                                : "text-slate-600"
-                                        }`}
+                                            ? "text-white"
+                                            : "text-slate-600"
+                                            }`}
                                     >
                                         {step.label}
                                     </span>
 
-                                    
+
                                     {step.key === "uploading" &&
                                         job.status ===
-                                            "uploading" && (
+                                        "uploading" && (
                                             <span className="text-xs text-slate-400">
                                                 {
                                                     job.uploadProgress
@@ -199,21 +190,21 @@ const QueueItem = ({ job }: QueueItemProps) => {
                                             </span>
                                         )}
 
-                                    
+
                                     {step.key ===
-                                            "processing" &&
+                                        "processing" &&
                                         job.status ===
-                                            "processing" && (
+                                        "processing" && (
                                             <span className="text-xs text-slate-400">
                                                 {job.progress}%
                                             </span>
                                         )}
                                 </div>
 
-                                
+
                                 {step.key === "uploading" &&
                                     job.status ===
-                                        "uploading" && (
+                                    "uploading" && (
                                         <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-slate-800">
                                             <div
                                                 className="h-full rounded-full bg-white transition-all duration-200"
@@ -224,21 +215,21 @@ const QueueItem = ({ job }: QueueItemProps) => {
                                         </div>
                                     )}
 
-                                
+
                                 {isWaiting &&
                                     step.key ===
-                                        "queued" && (
+                                    "queued" && (
                                         <p className="mt-1 text-xs text-slate-500">
                                             Waiting for an available
                                             worker
                                         </p>
                                     )}
 
-                                
+
                                 {step.key ===
-                                        "processing" &&
+                                    "processing" &&
                                     job.status ===
-                                        "processing" && (
+                                    "processing" && (
                                         <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-slate-800">
                                             <div
                                                 className="h-full rounded-full bg-white transition-all duration-300"
@@ -254,7 +245,7 @@ const QueueItem = ({ job }: QueueItemProps) => {
                 })}
             </div>
 
-            
+
             {job.status === "completed" &&
                 job.result && (
                     <div className="mt-5 rounded-lg border border-emerald-500/20 bg-emerald-500/10 px-4 py-3">
@@ -265,6 +256,14 @@ const QueueItem = ({ job }: QueueItemProps) => {
                         <p className="mt-2 text-lg font-semibold text-white">
                             Total: {job.result.total}
                         </p>
+                        {job.executionOrder && (
+                            <p className="mt-2 text-sm text-slate-300">
+                                Execution order:{" "}
+                                <span className="font-semibold text-white">
+                                    #{job.executionOrder}
+                                </span>
+                            </p>
+                        )}
 
                         <p className="mt-1 text-xs text-slate-500">
                             Numbers processed:{" "}
@@ -273,7 +272,7 @@ const QueueItem = ({ job }: QueueItemProps) => {
                     </div>
                 )}
 
-            
+
             {job.status === "failed" && (
                 <div className="mt-5 rounded-lg border border-red-500/20 bg-red-500/10 px-4 py-3">
                     <p className="text-sm text-red-400">

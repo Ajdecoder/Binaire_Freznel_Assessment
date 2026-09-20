@@ -3,6 +3,7 @@ class QueueManager {
     this.highPriorityQueue = [];
     this.lowPriorityQueue = [];
     this.jobs = new Map();
+    console.log(this.jobs)
   }
 
   add(job) {
