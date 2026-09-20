@@ -248,7 +248,7 @@ const QueueItem = ({ job }: QueueItemProps) => {
 
             {job.status === "completed" &&
                 job.result && (
-                    <div className="mt-5 rounded-lg border border-emerald-500/20 bg-emerald-500/10 px-4 py-3">
+                    <div className="mt-5 rounded-lg border border-rose-500/20 bg-emerald-500/10 px-4 py-3">
                         <p className="text-sm text-emerald-400">
                             Processing completed
                         </p>

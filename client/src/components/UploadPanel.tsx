@@ -20,7 +20,9 @@ const UploadPanel = ({ setJobs }: UploadPanelProps) => {
     const handleFileChange = (
         event: ChangeEvent<HTMLInputElement>
     ) => {
-        const selectedFiles = Array.from(event.target.files || []);
+        const selectedFiles = Array.from(
+            event.target.files || []
+        );
 
         const csvFiles = selectedFiles.filter((file) =>
             file.name.toLowerCase().endsWith(".csv")
@@ -29,8 +31,6 @@ const UploadPanel = ({ setJobs }: UploadPanelProps) => {
         if (csvFiles.length === 0) return;
 
         setFiles(csvFiles);
-
-        // Default priority for every file
         setPriorities(
             csvFiles.map(() => "high")
         );
@@ -52,7 +52,6 @@ const UploadPanel = ({ setJobs }: UploadPanelProps) => {
 
         setIsUploading(true);
 
-        // Create temporary jobs for UI
         const tempJobs: Job[] = files.map(
             (file, index) => ({
                 id: `temp-${Date.now()}-${index}`,
@@ -69,18 +68,22 @@ const UploadPanel = ({ setJobs }: UploadPanelProps) => {
 
         try {
             const results = await Promise.all(
-                files.map((files, fileIndex) =>
+                files.map((file, fileIndex) =>
                     UploadCSV(
-                        [files],
+                        [file],
                         [priorities[fileIndex]],
                         (uploadProgress) => {
                             setJobs((prev) =>
                                 prev.map((job) => {
-                                    const index = tempJobs.findIndex(
-                                        (tempJob) => tempJob.id === job.id
-                                    );
+                                    const index =
+                                        tempJobs.findIndex(
+                                            (tempJob) =>
+                                                tempJob.id === job.id
+                                        );
 
-                                    if (index !== fileIndex) return job;
+                                    if (index !== fileIndex) {
+                                        return job;
+                                    }
 
                                     return {
                                         ...job,
@@ -94,14 +97,16 @@ const UploadPanel = ({ setJobs }: UploadPanelProps) => {
             );
 
             const data = {
-                jobs: results.flatMap((result) => result.jobs),
+                jobs: results.flatMap(
+                    (result) => result.jobs
+                ),
             };
 
-            
             setJobs((prev) =>
                 prev.map((job) => {
                     const index = tempJobs.findIndex(
-                        (tempJob) => tempJob.id === job.id
+                        (tempJob) =>
+                            tempJob.id === job.id
                     );
 
                     if (index === -1) return job;
@@ -122,7 +127,8 @@ const UploadPanel = ({ setJobs }: UploadPanelProps) => {
             setJobs((prev) =>
                 prev.map((job) => {
                     const isTempJob = tempJobs.some(
-                        (tempJob) => tempJob.id === job.id
+                        (tempJob) =>
+                            tempJob.id === job.id
                     );
 
                     return isTempJob
@@ -139,19 +145,18 @@ const UploadPanel = ({ setJobs }: UploadPanelProps) => {
     };
 
     return (
-        <section className="rounded-2xl border border-slate-800 p-6">
+        <section className="border border-zinc-800 p-6">
             <div className="mb-6">
                 <h2 className="text-lg font-semibold text-white">
-                    Upload CSV
+                    Upload CSV Files
                 </h2>
 
-                <p className="mt-1 text-sm text-slate-400">
-                    Select multiple CSV files and choose their
-                    processing priority.
+                <p className="mt-1 text-sm text-zinc-500">
+                    Add CSV files to the queue and set their priority.
                 </p>
             </div>
 
-            <label className="group flex min-h-44 cursor-pointer flex-col items-center justify-center rounded-xl border border-dashed border-slate-700 bg-slate-950 px-6 transition hover:border-slate-500">
+            <label className="group flex min-h-40 cursor-pointer flex-col items-center justify-center border border-dashed border-zinc-700 px-6 transition hover:border-zinc-500">
                 <input
                     type="file"
                     accept=".csv,text/csv"
@@ -161,7 +166,7 @@ const UploadPanel = ({ setJobs }: UploadPanelProps) => {
                     className="hidden"
                 />
 
-                <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-slate-800 text-xl">
+                <div className="mb-3 flex h-10 w-10 items-center justify-center text-xl text-zinc-500">
                     ↑
                 </div>
 
@@ -172,7 +177,7 @@ const UploadPanel = ({ setJobs }: UploadPanelProps) => {
                             {files.length > 1 ? "s" : ""} selected
                         </p>
 
-                        <p className="mt-1 text-xs text-slate-500">
+                        <p className="mt-1 text-xs text-zinc-600">
                             Click to choose different files
                         </p>
                     </>
@@ -182,8 +187,8 @@ const UploadPanel = ({ setJobs }: UploadPanelProps) => {
                             Choose CSV files
                         </p>
 
-                        <p className="mt-1 text-xs text-slate-500">
-                            You can select multiple CSV files
+                        <p className="mt-1 text-xs text-zinc-600">
+                            Multiple files can be selected
                         </p>
                     </>
                 )}
@@ -194,14 +199,14 @@ const UploadPanel = ({ setJobs }: UploadPanelProps) => {
                     {files.map((file, index) => (
                         <div
                             key={`${file.name}-${index}`}
-                            className="flex flex-col gap-3 rounded-lg border border-slate-800 bg-slate-950 p-4 sm:flex-row sm:items-center sm:justify-between"
+                            className="flex flex-col gap-3 border border-zinc-800 p-4 sm:flex-row sm:items-center sm:justify-between"
                         >
                             <div>
                                 <p className="text-sm font-medium text-white">
                                     {file.name}
                                 </p>
 
-                                <p className="mt-1 text-xs text-slate-500">
+                                <p className="mt-1 text-xs text-zinc-600">
                                     {(file.size / 1024).toFixed(1)} KB
                                 </p>
                             </div>
@@ -216,10 +221,10 @@ const UploadPanel = ({ setJobs }: UploadPanelProps) => {
                                             "low"
                                         )
                                     }
-                                    className={`rounded-lg border px-3 py-1.5 text-xs transition ${
+                                    className={`border px-3 py-1.5 text-xs transition ${
                                         priorities[index] === "low"
-                                            ? "border-slate-500 bg-slate-800 text-white"
-                                            : "border-slate-800 bg-slate-950 text-slate-400 hover:text-white"
+                                            ? "border-zinc-400 text-white"
+                                            : "border-zinc-800 text-zinc-500 hover:text-white"
                                     }`}
                                 >
                                     Low
@@ -234,10 +239,10 @@ const UploadPanel = ({ setJobs }: UploadPanelProps) => {
                                             "high"
                                         )
                                     }
-                                    className={`rounded-lg border px-3 py-1.5 text-xs transition ${
+                                    className={`border px-3 py-1.5 text-xs transition ${
                                         priorities[index] === "high"
-                                            ? "border-white bg-white text-slate-950"
-                                            : "border-slate-800 bg-slate-950 text-slate-400 hover:text-white"
+                                            ? "border-zinc-300 text-white"
+                                            : "border-zinc-800 text-zinc-500 hover:text-white"
                                     }`}
                                 >
                                     High
@@ -256,7 +261,7 @@ const UploadPanel = ({ setJobs }: UploadPanelProps) => {
                         isUploading
                     }
                     onClick={handleUpload}
-                    className="rounded-lg bg-white px-5 py-2.5 text-sm font-semibold text-slate-950 transition hover:bg-slate-200 disabled:cursor-not-allowed disabled:opacity-40"
+                    className="border border-zinc-700 px-5 py-2.5 text-sm font-medium text-white transition hover:border-zinc-500 disabled:cursor-not-allowed disabled:opacity-40"
                 >
                     {isUploading
                         ? "Uploading..."

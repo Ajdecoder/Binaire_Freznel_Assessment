@@ -29,7 +29,7 @@ const QueueStats = ({
       {stats.map((stat) => (
         <div
           key={stat.label}
-          className="rounded-2xl border border-slate-800 bg-slate-900 p-5"
+          className="rounded-2xl border border-slate-800 bg-gray-900 p-5"
         >
           <p className="text-sm text-slate-400">
             {stat.label}
