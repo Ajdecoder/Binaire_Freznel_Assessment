@@ -1,62 +1,82 @@
 class QueueController {
-  constructor(queueManager, workerManager) {
-    this.queueManager = queueManager;
-    this.workerManager = workerManager;
+    constructor(
+        queueManager,
+        workerManager,
+        notifyJobUpdate
+    ) {
+        this.queueManager = queueManager;
+        this.workerManager = workerManager;
+        this.notifyJobUpdate = notifyJobUpdate;
 
-    this.currentJob = null;
-  }
-
-  addJob(job) {
-    this.queueManager.add(job);
-
-    if (this.currentJob) {
-      job.updateStatus("waiting");
-    } else {
-      job.updateStatus("queued");
+        this.isProcessing = false;
     }
 
-    this.processNext();
-  }
+    addJob(job) {
+        this.queueManager.add(job);
 
-  async processNext() {
-    if (this.currentJob) {
-      return;
-    }
+        
+        
+        if (this.isProcessing) {
+            job.updateStatus("waiting");
 
-    const job = this.queueManager.getNextJob();
+            this.notifyJobUpdate(job);
 
-    if (!job) {
-      return;
-    }
-
-    this.currentJob = job;
-
-    job.updateStatus("processing");
-    job.updateProgress(0);
-
-    try {
-      await this.workerManager.processJob(
-        job,
-        (progress) => {
-          job.updateProgress(progress);
+            return;
         }
-      );
 
-    } catch (error) {
-      console.error(
-        `[QUEUE] Failed: ${job.fileName}`,
-        error
-      );
+        
+        job.updateStatus("queued");
 
-      job.fail(error.message);
-    } finally {
-      this.currentJob = null;
+        this.notifyJobUpdate(job);
 
-      setImmediate(() => {
-        this.processNext();
-      });
+        
+        setTimeout(() => {
+            this.processNext();
+        }, 2000);
     }
-  }
+
+    async processNext() {
+        if (this.isProcessing) return;
+
+        const job = this.queueManager.getNextJob();
+
+        if (!job) return;
+
+        this.isProcessing = true;
+
+        
+        await new Promise((resolve) =>
+            setTimeout(resolve, 1500)
+        );
+
+        job.updateStatus("processing");
+        job.updateProgress(0);
+
+        this.notifyJobUpdate(job);
+
+        try {
+            await this.workerManager.processJob(
+                job,
+                (progress) => {
+                    job.updateProgress(progress);
+
+                    this.notifyJobUpdate(job);
+                }
+            );
+
+            this.notifyJobUpdate(job);
+        } catch (error) {
+            job.fail(error.message);
+
+            this.notifyJobUpdate(job);
+        } finally {
+            this.isProcessing = false;
+
+            setImmediate(() => {
+                this.processNext();
+            });
+        }
+    }
 }
 
 module.exports = QueueController;

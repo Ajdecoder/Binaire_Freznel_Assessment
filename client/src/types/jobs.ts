@@ -7,8 +7,12 @@ export interface Job {
     fileName: string;
     priority: JobPriority;
     status: JobStatus;
+
+    uploadProgress: number;
     progress: number;
+
     processId?: string;
+
     result?: {
         total: number;
         numberCount: number;

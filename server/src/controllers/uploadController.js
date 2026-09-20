@@ -9,12 +9,6 @@ module.exports = ({ queueController }) => {
         });
       }
 
-      if (!req.file.originalname.toLowerCase().endsWith(".csv")) {
-        return res.status(400).json({
-          message: "Only CSV files are allowed",
-        });
-      }
-
       const { priority } = req.body;
 
       if (!["high", "low"].includes(priority)) {
@@ -32,17 +26,21 @@ module.exports = ({ queueController }) => {
         priority,
       });
 
-      queueController.addJob(job);
+      job.updateStatus("uploaded");
 
-      return res.status(201).json({
+      res.status(201).json({
         message: "File uploaded successfully",
         job,
       });
-    } catch (error) {
-      console.error("Upload controller error:", error);
 
-      return res.status(500).json({
-        message: "Failed to create job",
+      setImmediate(() => {
+        queueController.addJob(job);
+      });
+    } catch (error) {
+      console.error(error);
+
+      res.status(500).json({
+        message: "Failed to upload file",
       });
     }
   };

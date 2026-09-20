@@ -5,6 +5,7 @@ import UploadPanel from "./components/UploadPanel";
 import QueueStats from "./components/QueueStats";
 import QueueList from "./components/QueueList";
 import { Job } from "./types/jobs";
+import { api } from "./Api";
 
 const App = () => {
   const [jobs, setJobs] = useState<Job[]>([]);
@@ -14,54 +15,88 @@ const App = () => {
 
   const fetchJobs = async () => {
     try {
-      const response = await fetch(
-        "http://localhost:9002/api/jobs"
-      );
+      const response = await api.get("/jobs");
 
-      if (!response.ok) {
+      if (response.status < 200 || response.status >= 300) {
         throw new Error("Failed to fetch jobs");
       }
 
-      const data = await response.json();
-
-      setJobs(data.jobs);
+      setJobs(response.data.jobs);
     } catch (error) {
       console.error("Failed to fetch jobs:", error);
     }
   };
 
+  useEffect(() => {
+    const serverUrl =
+      import.meta.env.VITE_SERVER_URL ||
+      "http://localhost:9002";
 
-  const startPolling = () => {
-    if (intervalRef.current) return;
+    const wsUrl = serverUrl.startsWith("https://")
+      ? serverUrl.replace("https://", "wss://")
+      : serverUrl.replace("http://", "ws://");
 
+    const socket = new WebSocket(`${wsUrl}/ws`);
 
-    fetchJobs();
+    socket.onopen = () => {
+      console.log("WebSocket connected");
+    };
 
-    intervalRef.current = setInterval(() => {
-      fetchJobs();
-    }, 300);
+    socket.onmessage = (event) => {
+      const data = JSON.parse(event.data);
 
+      if (data.type === "jobs:snapshot") {
+        setJobs(data.jobs);
+        return;
+      }
 
-    timeoutRef.current = setTimeout(() => {
-      stopPolling();
-    }, 5000);
-  };
+      if (data.type === "job:update") {
+        setJobs((previousJobs) => {
+          const incomingJob = data.job;
 
-  const stopPolling = () => {
-    if (intervalRef.current) {
-      clearInterval(intervalRef.current);
-      intervalRef.current = null;
-    }
+          const existingIndex = previousJobs.findIndex(
+            (job) => job.id === incomingJob.id
+          );
 
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
-      timeoutRef.current = null;
-    }
+          if (existingIndex !== -1) {
+            return previousJobs.map((job) =>
+              job.id === incomingJob.id
+                ? incomingJob
+                : job
+            );
+          }
 
+          const temporaryJobIndex = previousJobs.findIndex(
+            (job) =>
+              job.status === "uploading" &&
+              job.fileName === incomingJob.fileName
+          );
 
-    fetchJobs();
-  };
+          if (temporaryJobIndex !== -1) {
+            return previousJobs.map((job, index) =>
+              index === temporaryJobIndex
+                ? incomingJob
+                : job
+            );
+          }
 
+          return [...previousJobs, incomingJob];
+        });
+      }
+    };
+
+    socket.onerror = (error) => {
+      console.error("WebSocket error:", error);
+    };
+
+    socket.onclose = () => {
+      console.log("WebSocket disconnected");
+    };
+
+    return () => {
+      socket.close();
+    };
+  }, []);
 
   useEffect(() => {
     fetchJobs();
@@ -98,7 +133,6 @@ const App = () => {
       <main className="mx-auto max-w-7xl space-y-8 px-4 py-8 sm:px-6 lg:px-8">
         <UploadPanel
           setJobs={setJobs}
-          onUploadComplete={startPolling}
         />
 
         <QueueStats

@@ -15,10 +15,21 @@ app.use(express.json());
 const queueManager = new QueueManager();
 const workerManager = new WorkerManager();
 
+const notifyJobUpdate = (job) => {
+  const broadcastJobUpdate = app.get("broadcastJobUpdate");
+
+  if (broadcastJobUpdate) {
+    broadcastJobUpdate(job);
+  }
+};
+
 const queueController = new QueueController(
   queueManager,
-  workerManager
+  workerManager,
+  notifyJobUpdate
 );
+
+app.set("queueManager", queueManager);
 
 app.get("/api/health", (req, res) => {
   res.json({
@@ -39,18 +50,6 @@ app.get("/api/jobs", (req, res) => {
     jobs: queueManager.getAllJobs(),
     queue: queueManager.getQueueStatus(),
   });
-});
-
-app.get("/api/jobs/:jobId", (req, res) => {
-  const job = queueManager.getJob(req.params.jobId);
-
-  if (!job) {
-    return res.status(404).json({
-      message: "Job not found",
-    });
-  }
-
-  res.json({ job });
 });
 
 module.exports = app;

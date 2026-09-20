@@ -1,134 +1,115 @@
-import { ChangeEvent, Dispatch, SetStateAction, useRef, useState } from "react";
-import { Job, JobPriority } from "../types/jobs";
+import {
+    ChangeEvent,
+    Dispatch,
+    SetStateAction,
+    useState,
+} from "react";
 
+import { Job, JobPriority } from "../types/jobs";
+import { UploadCSV } from "../Api";
 
 interface UploadPanelProps {
     setJobs: Dispatch<SetStateAction<Job[]>>;
-    onUploadComplete: () => void;
 }
 
-const UploadPanel = ({
-    setJobs,
-    onUploadComplete,
-}: UploadPanelProps) => {
+const UploadPanel = ({ setJobs }: UploadPanelProps) => {
     const [file, setFile] = useState<File | null>(null);
     const [priority, setPriority] = useState<JobPriority>("high");
-    const processingRef = useRef(false);
-    const queueRef = useRef<Job[]>([]);
+    const [isUploading, setIsUploading] = useState(false);
 
-    const updateJob = (jobId: string, updates: Partial<Job>) => {
-        setJobs((prev) =>
-            prev.map((job) =>
-                job.id === jobId
-                    ? { ...job, ...updates }
-                    : job
-            )
-        );
-    };
-
-    const sleep = (ms: number) =>
-        new Promise((resolve) => setTimeout(resolve, ms));
-
-    const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const handleFileChange = (
+        event: ChangeEvent<HTMLInputElement>
+    ) => {
         const selectedFile = event.target.files?.[0];
 
         if (!selectedFile) return;
 
+        if (
+            !selectedFile.name
+                .toLowerCase()
+                .endsWith(".csv")
+        ) {
+            return;
+        }
+
         setFile(selectedFile);
-    };
-
-    const processQueue = async () => {
-        if (processingRef.current || queueRef.current.length === 0) {
-            return;
-        }
-
-        processingRef.current = true;
-
-        queueRef.current.sort((a, b) => {
-            if (a.priority === "high" && b.priority === "low") return -1;
-            if (a.priority === "low" && b.priority === "high") return 1;
-            return 0;
-        });
-
-        const nextJob = queueRef.current.shift();
-
-        if (!nextJob) {
-            processingRef.current = false;
-            return;
-        }
-
-        const processId = String(
-            Math.floor(Math.random() * 9000) + 1000
-        );
-
-        updateJob(nextJob.id, {
-            status: "processing",
-            progress: 0,
-            processId,
-        });
-
-        for (let progress = 10; progress <= 100; progress += 10) {
-            await sleep(400);
-
-            updateJob(nextJob.id, {
-                progress,
-            });
-        }
-
-        updateJob(nextJob.id, {
-            status: "completed",
-            progress: 100,
-            result: {
-                total: 0,
-                numberCount: 0,
-            },
-        });
-
-        processingRef.current = false;
-
-        processQueue();
     };
 
     const handleUpload = async (
         file: File,
         priority: JobPriority
     ) => {
+        if (isUploading) return;
+
+        setIsUploading(true);
+
+        const jobId = `job-${Date.now()}-${Math.random()
+            .toString(36)
+            .slice(2, 7)}`;
+
+        const newJob: Job = {
+            id: jobId,
+            fileName: file.name,
+            priority,
+            status: "uploading",
+            uploadProgress: 0,
+            progress: 0,
+        };
+
+        setJobs((prev) => [...prev, newJob]);
+
         try {
-            const formData = new FormData();
-
-            formData.append("file", file);
-            formData.append("priority", priority);
-
-            const response = await fetch(
-                "http://localhost:9002/api/jobs/upload",
-                {
-                    method: "POST",
-                    body: formData,
+            const data = await UploadCSV(
+                file,
+                priority,
+                (uploadProgress) => {
+                    setJobs((prev) =>
+                        prev.map((job) =>
+                            job.id === jobId
+                                ? {
+                                    ...job,
+                                    uploadProgress,
+                                }
+                                : job
+                        )
+                    );
                 }
             );
 
-            if (!response.ok) {
-                const error = await response.json();
 
-                throw new Error(
-                    error.message || "Upload failed"
-                );
-            }
-
-            const data = await response.json();
-
-            console.log("Server Job:", data.job);
-            setJobs((prev) => [...prev, data.job]);
-            onUploadComplete();
+            setJobs((prev) =>
+                prev.map((job) =>
+                    job.id === jobId
+                        ? {
+                            ...job,
+                            ...data.job,
+                            uploadProgress: 100,
+                        }
+                        : job
+                )
+            );
 
             setFile(null);
         } catch (error) {
-            console.error("Upload error:", error);
+            console.error("Upload failed:", error);
+
+            setJobs((prev) =>
+                prev.map((job) =>
+                    job.id === jobId
+                        ? {
+                            ...job,
+                            status: "failed",
+                        }
+                        : job
+                )
+            );
+        } finally {
+            setIsUploading(false);
         }
     };
 
     return (
-        <section className="rounded-2xl border border-slate-800  p-6">
+        <section className="rounded-2xl border border-slate-800 p-6">
             <div className="mb-6">
                 <h2 className="text-lg font-semibold text-white">
                     Upload CSV
@@ -144,6 +125,7 @@ const UploadPanel = ({
                     type="file"
                     accept=".csv,text/csv"
                     onChange={handleFileChange}
+                    disabled={isUploading}
                     className="hidden"
                 />
 
@@ -183,22 +165,30 @@ const UploadPanel = ({
                     <div className="flex gap-3">
                         <button
                             type="button"
-                            onClick={() => setPriority("low")}
-                            className={`rounded-lg border px-4 py-2 text-sm transition ${priority === "low"
-                                ? "border-slate-500 bg-slate-800 text-white"
-                                : "border-slate-800 bg-slate-950 text-slate-400 hover:text-white"
-                                }`}
+                            disabled={isUploading}
+                            onClick={() =>
+                                setPriority("low")
+                            }
+                            className={`rounded-lg border px-4 py-2 text-sm transition ${
+                                priority === "low"
+                                    ? "border-slate-500 bg-slate-800 text-white"
+                                    : "border-slate-800 bg-slate-950 text-slate-400 hover:text-white"
+                            } disabled:cursor-not-allowed disabled:opacity-50`}
                         >
                             Low
                         </button>
 
                         <button
                             type="button"
-                            onClick={() => setPriority("high")}
-                            className={`rounded-lg border px-4 py-2 text-sm transition ${priority === "high"
-                                ? "border-white bg-white text-slate-950"
-                                : "border-slate-800 bg-slate-950 text-slate-400 hover:text-white"
-                                }`}
+                            disabled={isUploading}
+                            onClick={() =>
+                                setPriority("high")
+                            }
+                            className={`rounded-lg border px-4 py-2 text-sm transition ${
+                                priority === "high"
+                                    ? "border-white bg-white text-slate-950"
+                                    : "border-slate-800 bg-slate-950 text-slate-400 hover:text-white"
+                            } disabled:cursor-not-allowed disabled:opacity-50`}
                         >
                             High
                         </button>
@@ -207,11 +197,17 @@ const UploadPanel = ({
 
                 <button
                     type="button"
-                    disabled={!file}
-                    onClick={() => file && handleUpload(file, priority)}
+                    disabled={!file || isUploading}
+                    onClick={() => {
+                        if (file) {
+                            handleUpload(file, priority);
+                        }
+                    }}
                     className="rounded-lg bg-white px-5 py-2.5 text-sm font-semibold text-slate-950 transition hover:bg-slate-200 disabled:cursor-not-allowed disabled:opacity-40"
                 >
-                    Upload File
+                    {isUploading
+                        ? "Uploading..."
+                        : "Upload File"}
                 </button>
             </div>
         </section>
