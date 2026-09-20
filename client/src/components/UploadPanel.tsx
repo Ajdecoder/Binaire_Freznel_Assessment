@@ -58,6 +58,7 @@ const UploadPanel = ({ setJobs }: UploadPanelProps) => {
                 id: `temp-${Date.now()}-${index}`,
                 fileName: file.name,
                 priority: priorities[index],
+                executionOrder: index + 1,
                 status: "uploading",
                 uploadProgress: 0,
                 progress: 0,
@@ -96,7 +97,7 @@ const UploadPanel = ({ setJobs }: UploadPanelProps) => {
                 jobs: results.flatMap((result) => result.jobs),
             };
 
-            // Backend returns multiple jobs
+            
             setJobs((prev) =>
                 prev.map((job) => {
                     const index = tempJobs.findIndex(

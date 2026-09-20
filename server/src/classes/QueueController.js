@@ -45,7 +45,7 @@ class QueueController {
             setTimeout(resolve, 1500)
         );
 
-        // Actual execution starts here
+        // Actual execution is starts here
         this.executionCounter++;
 
         job.executionOrder = this.executionCounter;
