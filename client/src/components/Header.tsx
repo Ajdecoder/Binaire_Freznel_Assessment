@@ -1,20 +1,21 @@
 import { useEffect, useState } from "react";
+import { api } from "../Api";
 
 const Header = () => {
   const [serverConnected, setServerConnected] = useState(false);
 
   useEffect(() => {
     const checkServer = async () => {
-      try {
-        const response = await fetch(
-          "http://localhost:9002/api/health"
-        );
+    try {
+        const response = await api.get("/health");
 
-        setServerConnected(response.ok);
-      } catch (error) {
+        const connStatus = response.status === 200;
+
+        setServerConnected(connStatus);
+    } catch (error) {
         setServerConnected(false);
-      }
-    };
+    }
+};
 
     checkServer();
 
