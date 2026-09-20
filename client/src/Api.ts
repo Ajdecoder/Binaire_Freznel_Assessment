@@ -1,4 +1,5 @@
 import axios from "axios";
+import { JobPriority } from "./types/jobs";
 
 const URL =
     import.meta.env.VITE_SERVER_URL ||
@@ -10,7 +11,8 @@ export const api = axios.create({
 
 export const UploadCSV = async (
     file: File,
-    priority: string
+    priority: JobPriority,
+    onProgress?: (progress: number) => void
 ) => {
     const formData = new FormData();
 
@@ -19,7 +21,18 @@ export const UploadCSV = async (
 
     const response = await api.post(
         "/jobs/upload",
-        formData
+        formData,
+        {
+            onUploadProgress: (event) => {
+                if (!event.total) return;
+
+                const progress = Math.round(
+                    (event.loaded / event.total) * 100
+                );
+
+                onProgress?.(progress);
+            },
+        }
     );
 
     return response.data;

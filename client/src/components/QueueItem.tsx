@@ -150,7 +150,7 @@ const QueueItem = ({ job }: QueueItemProps) => {
                             
                             {index < steps.length - 1 && (
                                 <div
-                                    className={`absolute left-[9px] top-6 h-7 w-px ${
+                                    className={`absolute left-2.25 top-6 h-7 w-px ${
                                         isCompleted
                                             ? "bg-slate-500"
                                             : "bg-red-800"
